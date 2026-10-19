@@ -3,18 +3,55 @@ local source = {}
 
 ---@type lsp.CompletionItem[]
 local symbol_table = {
-    {label = "Counterpart-to:"},
-    {label = "Follow-up-to:"},
-    {label = "Fixup-for:"},
-    {label = "Signed-off-by:"},
-    {label = "Co-authored-by:"},
-    {label = "On-behalf-of:"},
-    {label = "Assisted-by:"},
-    {label = "See:"},
-    {label = "Ticket:"},
-    {label = "Closes:"},
-    {label = "Fixes:"},
-    {label = "skip-checks: true"}
+    {
+        label = "Counterpart-to:",
+        documentation = "Commit or PR that this relates to, typically in another repository."
+    },
+    {
+        label = "Follow-up-to:",
+        documentation = "Commit or PR that this succeeds."
+    },
+    {
+        label = "Fixup-for:",
+        documentation = "Commit that would have been subject to a fixup if not already pushed."
+    },
+    {
+        label = "Signed-off-by:",
+        -- Documentation adapted from git help commit.
+        documentation = "The meaning of a signoff depends on the project to which you’re committing. For example, it may certify that the committer has the rights to submit the work under the project’s license or agrees to some contributor representation, such as a Developer Certificate of Origin. See https://developercertificate.org."
+    },
+    {
+        label = "Co-authored-by:",
+        documentation = "Attribute the commit to multiple authors.\n\nSee https://docs.github.com/en/pull-requests/how-tos/commit-changes/creating-a-commit-with-multiple-authors#creating-a-commit-with-multiple-authors."
+    },
+    {
+        label = "On-behalf-of:",
+        documentation = "Attribute the commit to an organisation.\n\nSee https://docs.github.com/en/pull-requests/how-tos/commit-changes/creating-a-commit-with-multiple-authors#creating-a-commit-on-behalf-of-an-organization."
+    },
+    {
+        label = "Assisted-by:",
+        documentation = "Provide attribution for tool use.\n\nSee https://docs.kernel.org/process/coding-assistants.html#attribution."
+    },
+    {
+        label = "See:",
+        documentation = "URL to some related resource for additional context."
+    },
+    {
+        label = "Ticket:",
+        documentation = "Unique identifier in the relevant tracking system."
+    },
+    {
+        label = "Closes:",
+        documentation = "Link to an issue this commit closes.\n\nSee https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword."
+    },
+    {
+        label = "Fixes:",
+        documentation = "Link to an issue this commit fixes.\n\nSee https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword."
+    },
+    {
+        label = "skip-checks: true",
+        documentation = "Skip CI/CD workflows in GitHub Actions.\n\nSee https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs."
+    }
 }
 
 function source:is_available()
