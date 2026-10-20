@@ -29,7 +29,7 @@ local symbol_table = {
         documentation = "Attribute the commit to multiple authors.\n\nSee https://docs.github.com/en/pull-requests/how-tos/commit-changes/creating-a-commit-with-multiple-authors#creating-a-commit-with-multiple-authors."
     },
     {
-        label = "On-behalf-of:",
+        label = "On-behalf-of: @",
         documentation = "Attribute the commit to an organisation.\n\nSee https://docs.github.com/en/pull-requests/how-tos/commit-changes/creating-a-commit-with-multiple-authors#creating-a-commit-on-behalf-of-an-organization."
     },
     {
@@ -45,11 +45,11 @@ local symbol_table = {
         documentation = "Unique identifier in the relevant tracking system."
     },
     {
-        label = "Closes:",
+        label = "Closes: #",
         documentation = "Link to an issue this commit closes.\n\nSee https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword."
     },
     {
-        label = "Fixes:",
+        label = "Fixes: #",
         documentation = "Link to an issue this commit fixes.\n\nSee https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword."
     },
     {
