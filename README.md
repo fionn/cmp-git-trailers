@@ -1,6 +1,10 @@
 # cmp-git-trailers
 
-Completion source for Git trailers. This covers some of the common trailers that I use; it's not intended to be exhaustive (e.g. we don't seek to cover https://lore.kernel.org/git/60ad75ac7ffca_2ae08208b@natae.notmuch/), although contributions are welcome.
+Completion source for Git trailers.
+
+This covers some of the common trailers that I use; it's not intended to be exhaustive (e.g. we don't seek to cover https://lore.kernel.org/git/60ad75ac7ffca_2ae08208b@natae.notmuch/), although contributions are welcome.
+
+It also fetches trailers from the last 100 commits and offers these as completion candidates too.
 
 # Installation
 

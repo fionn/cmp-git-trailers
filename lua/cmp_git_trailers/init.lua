@@ -1,6 +1,8 @@
 ---@diagnostic disable-next-line: name-style-check
 local source = {}
 
+local updated_trailers = false
+
 ---@type lsp.CompletionItem[]
 local symbol_table = {
     {
@@ -54,6 +56,40 @@ local symbol_table = {
     }
 }
 
+-- Get all trailers in the past 100 commits and merge them with our hard-coded
+-- list (by mutating it as a side effect).
+local function update_symbol_table()
+    if updated_trailers then
+        return
+    end
+
+    local cmd = {"git", "log", "--pretty=format:%(trailers:keyonly=true)", "-100"}
+    local result = vim.system(cmd, {text = true}):wait(1000)
+    if result.code ~= 0 then
+        vim.notify("Failed to get trailers from log", vim.log.levels.DEBUG)
+        return
+    end
+
+    ---@type string[]
+    local labels = {}
+    for _, s in ipairs(symbol_table) do
+        table.insert(labels, s.label)
+    end
+
+    ---@type lsp.CompletionItem[]
+    local trailers = {}
+    for key in result.stdout:gmatch("[^\n]+") do
+        key = key .. ":"
+        if not vim.list_contains(labels, key) then
+            table.insert(trailers, {label = key})
+        end
+    end
+
+    vim.list.unique(trailers)
+    vim.list_extend(symbol_table, trailers)
+    updated_trailers = true
+end
+
 function source:is_available()
     return vim.bo.filetype == "gitcommit"
 end
@@ -61,6 +97,7 @@ end
 ---@param params cmp.SourceCompletionApiParams
 ---@param callback fun(response: lsp.CompletionResponse|nil)
 function source:complete(params, callback)
+    update_symbol_table()
     if params.context.cursor.row < 3 then
         -- The cursor is on the subject or gap between subject and body, where
         -- trailers are not allowed, so don't offer any completion candidates.
