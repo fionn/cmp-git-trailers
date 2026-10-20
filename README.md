@@ -2,9 +2,11 @@
 
 Completion source for Git trailers.
 
-This covers some of the common trailers that I use; it's not intended to be exhaustive (e.g. we don't seek to cover https://lore.kernel.org/git/60ad75ac7ffca_2ae08208b@natae.notmuch/), although contributions are welcome.
+Trailers are sourced from:
+* a small built-in list of common trailers,
+* the previous hundred commits (if available, asynchronously).
 
-It also fetches trailers from the last 100 commits and offers these as completion candidates too.
+There are many somewhat popular trailers (see e.g. [_The top 1% of commit trailers_](https://lore.kernel.org/git/60ad75ac7ffca_2ae08208b@natae.notmuch/)). We don't intend to cover these, although contributions for useful trailers are welcome.
 
 # Installation
 
