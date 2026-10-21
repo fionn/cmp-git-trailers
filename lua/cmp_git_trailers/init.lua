@@ -187,8 +187,9 @@ function source:complete(params, callback)
     end
 
     local co_author_prefix = params.context.cursor_before_line:match("^Co%-authored%-by: (.*)$")
-    if co_author_prefix then
-        update_author_table(co_author_prefix)
+    local sign_off_prefix = params.context.cursor_before_line:match("^Signed%-off%-by: (.*)$")
+    if co_author_prefix or sign_off_prefix then
+        update_author_table(co_author_prefix or sign_off_prefix)
         callback({items = author_table, isIncomplete = true})
         return
     end
