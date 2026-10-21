@@ -125,7 +125,6 @@ local function update_author_table()
         vim.notify("Failed to get authors from log", vim.log.levels.DEBUG)
         return
     end
-    if not log_authors.stdout then return end
 
     ---@type string[]
     local seen = {}
@@ -142,7 +141,6 @@ local function update_author_table()
         vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
         return
     end
-    if not trailer_authors.stdout then return end
 
     for author in trailer_authors.stdout:gmatch("[^\n]+") do
         if not vim.list_contains(seen, author) then
