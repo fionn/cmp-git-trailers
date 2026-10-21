@@ -8,7 +8,7 @@ Trailers are sourced from:
 
 There are many somewhat popular trailers (see e.g. [_The top 1% of commit trailers_](https://lore.kernel.org/git/60ad75ac7ffca_2ae08208b@natae.notmuch/)). We don't intend to cover these, although contributions for useful trailers are welcome.
 
-We also provide completion candidates for `Co-authored-by` values, sourced from previous commit authors.
+We also provide completion candidates for `Co-authored-by` values, sourced from previous commit authors and existing `Co-authored-by` values.
 
 # Installation
 

@@ -106,24 +106,44 @@ local function update_symbol_table()
     table.insert(jobs, job)
 end
 
--- Get authors from the commit log as candidate co-authors for completion. We do
--- this synchronously and mutate the global table, since we don't have any
--- results to fall back on and we only want to do it at most once.
+-- Get authors from the commit log and Co-authored-by trailers as candidate
+-- co-authors for completion. We do this synchronously and mutate the global
+-- table, since we don't have any results to fall back on and we only want to
+-- do it at most once.
 local function update_author_table()
     if updated_authors then return end
     updated_authors = true
 
-    local cmd = {"git", "log", "--pretty=%an <%ae>", "-100"}
-    local result = vim.system(cmd, {text = true}):wait(1000)
-    if result.code ~= 0 then
+    local cmd_from_authors = {"git", "log", "--pretty=%an <%ae>", "-100"}
+    local log_authors_job = vim.system(cmd_from_authors, {text = true})
+
+    local cmd_from_trailers = {"git", "log", "--pretty=format:%(trailers:key=Co-authored-by,valueonly)", "-100"}
+    local trailer_authors_job = vim.system(cmd_from_trailers, {text = true})
+
+    local log_authors = log_authors_job:wait(1000)
+    if log_authors.code ~= 0 then
         vim.notify("Failed to get authors from log", vim.log.levels.DEBUG)
         return
     end
-    if not result.stdout then return end
+    if not log_authors.stdout then return end
 
     ---@type string[]
     local seen = {}
-    for author in result.stdout:gmatch("[^\n]+") do
+
+    for author in log_authors.stdout:gmatch("[^\n]+") do
+        if not vim.list_contains(seen, author) then
+            table.insert(seen, author)
+            table.insert(author_table, {label = author})
+        end
+    end
+
+    local trailer_authors = trailer_authors_job:wait(1000)
+    if trailer_authors.code ~= 0 then
+        vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
+    end
+    if not trailer_authors.stdout then return end
+
+    for author in trailer_authors.stdout:gmatch("[^\n]+") do
         if not vim.list_contains(seen, author) then
             table.insert(seen, author)
             table.insert(author_table, {label = author})
