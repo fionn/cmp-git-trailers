@@ -98,7 +98,7 @@ local function update_symbol_table()
             end
         end
 
-        vim.list.unique(trailers)
+        vim.list.unique(trailers, function(x) return x.label end)
         vim.list_extend(trailer_table, trailers)
         updated_trailers = true
     end)
