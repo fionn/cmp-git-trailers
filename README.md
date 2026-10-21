@@ -10,7 +10,7 @@ There are many somewhat popular trailers (see e.g. [_The top 1% of commit traile
 
 We also provide completion candidates for `Co-authored-by` values, sourced from previous commit authors and existing `Co-authored-by` values.
 
-# Installation
+## Installation
 
 Install this plugin, then add it as a completion source, either generally (it will only offer completion candidates for commit messages anyway) or specifically for commit messages with
 
