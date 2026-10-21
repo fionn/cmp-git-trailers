@@ -4,9 +4,10 @@ local source = {}
 ---@type vim.SystemObj[]
 local jobs = {}
 local updated_trailers = false
+local updated_authors = false
 
 ---@type lsp.CompletionItem[]
-local symbol_table = {
+local trailer_table = {
     {
         label = "Counterpart-to:",
         documentation = "Commit or PR that this relates to, typically in another repository."
@@ -58,6 +59,9 @@ local symbol_table = {
     }
 }
 
+---@type lsp.CompletionItem[]
+local author_table = {}
+
 -- Get all trailers in the past 100 commits and merge them with our hard-coded
 -- list (by mutating it as a side effect).
 local function update_symbol_table()
@@ -81,7 +85,7 @@ local function update_symbol_table()
 
         ---@type string[]
         local labels = {}
-        for _, s in ipairs(symbol_table) do
+        for _, s in ipairs(trailer_table) do
             table.insert(labels, s.label)
         end
 
@@ -95,11 +99,36 @@ local function update_symbol_table()
         end
 
         vim.list.unique(trailers)
-        vim.list_extend(symbol_table, trailers)
+        vim.list_extend(trailer_table, trailers)
         updated_trailers = true
     end)
 
     table.insert(jobs, job)
+end
+
+-- Get authors from the commit log as candidate co-authors for completion. We do
+-- this synchronously and mutate the global table, since we don't have any
+-- results to fall back on and we only want to do it at most once.
+local function update_author_table()
+    if updated_authors then return end
+    updated_authors = true
+
+    local cmd = {"git", "log", "--pretty=%an <%ae>", "-100"}
+    local result = vim.system(cmd, {text = true}):wait(1000)
+    if result.code ~= 0 then
+        vim.notify("Failed to get authors from log", vim.log.levels.DEBUG)
+        return
+    end
+    if not result.stdout then return end
+
+    ---@type string[]
+    local seen = {}
+    for author in result.stdout:gmatch("[^\n]+") do
+        if not vim.list_contains(seen, author) then
+            table.insert(seen, author)
+            table.insert(author_table, {label = author})
+        end
+    end
 end
 
 function source:is_available()
@@ -125,6 +154,12 @@ function source:complete(params, callback)
         return
     end
 
+    if params.context.cursor_before_line:match("^Co%-authored%-by: .*") then
+        update_author_table()
+        callback(author_table)
+        return
+    end
+
     if not params.context.cursor_before_line:match("^%S*$") then
         -- The cursor is not on a (possibly empty) word at the start of a line,
         -- so this can't be a trailer, so don't offer any completion candidates.
@@ -132,7 +167,7 @@ function source:complete(params, callback)
         return
     end
 
-    callback({items = symbol_table, isIncomplete = not updated_trailers})
+    callback({items = trailer_table, isIncomplete = not updated_trailers})
 end
 
 return source
