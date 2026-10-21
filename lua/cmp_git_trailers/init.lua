@@ -91,7 +91,7 @@ local function update_symbol_table()
 
         ---@type lsp.CompletionItem[]
         local trailers = {}
-        for key in out.stdout:gmatch("[^\n]+") do
+        for key in assert(out.stdout):gmatch("[^\n]+") do
             key = key .. ":"
             if not vim.list_contains(labels, key) then
                 table.insert(trailers, {label = key})
@@ -134,7 +134,7 @@ local function update_author_table(query)
     ---@type string[]
     local seen = {}
 
-    for author in log_authors.stdout:gmatch("[^\n]+") do
+    for author in assert(log_authors.stdout):gmatch("[^\n]+") do
         if not vim.list_contains(seen, author) then
             table.insert(seen, author)
             table.insert(author_table, {label = author})
@@ -180,7 +180,7 @@ local function update_author_table(query)
         return
     end
 
-    for author in trailer_authors.stdout:gmatch("[^\n]+") do
+    for author in assert(trailer_authors.stdout):gmatch("[^\n]+") do
         if not vim.list_contains(seen, author) then
             table.insert(seen, author)
             table.insert(author_table, {label = author})
@@ -214,7 +214,7 @@ function source:complete(params, callback)
     local co_author_prefix = params.context.cursor_before_line:match("^Co%-authored%-by: (.*)$")
     local sign_off_prefix = params.context.cursor_before_line:match("^Signed%-off%-by: (.*)$")
     if co_author_prefix or sign_off_prefix then
-        update_author_table(co_author_prefix or sign_off_prefix)
+        update_author_table(assert(co_author_prefix or sign_off_prefix))
         callback({items = author_table, isIncomplete = true})
         return
     end
