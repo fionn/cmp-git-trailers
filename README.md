@@ -23,3 +23,9 @@ cmp.setup.filetype("gitcommit", {
 })
 ```
 or similar.
+
+## Demo
+
+<div align="center">
+    <a href="https://asciinema.org/a/QOAbXS9oWO4t5SAF"><img width="600" alt="Example Git trailer and co-author completion using fionn/cmp-git-trailers" src="https://github.com/user-attachments/assets/f136547e-2873-403a-83c1-2028859f1f0d"></a>
+</div>
