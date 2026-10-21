@@ -108,17 +108,25 @@ end
 
 -- Get authors from the commit log and Co-authored-by trailers as candidate
 -- co-authors for completion. We do this synchronously and mutate the global
--- table, since we don't have any results to fall back on and we only want to
--- do it at most once.
-local function update_author_table()
-    if updated_authors then return end
-    updated_authors = true
+-- table, since we don't have any results to fall back on.
+---@param query string
+local function update_author_table(query)
+    if query:match("^-") ~= nil then
+        -- The query doesn't look like an author, so bail.
+        return
+    end
 
-    local cmd_from_authors = {"git", "log", "--pretty=%an <%ae>", "-100"}
-    local log_authors_job = vim.system(cmd_from_authors, {text = true})
+    ---@type vim.SystemOpts
+    local system_opts = {
+        text = true,
+        timeout = 1000
+    }
+
+    local cmd_from_authors = {"git", "log", "--author=" .. query, "--pretty=%an <%ae>", "-100"}
+    local log_authors_job = vim.system(cmd_from_authors, system_opts)
 
     local cmd_from_trailers = {"git", "log", "--pretty=format:%(trailers:key=Co-authored-by,valueonly)", "-100"}
-    local trailer_authors_job = vim.system(cmd_from_trailers, {text = true})
+    local trailer_authors_job = vim.system(cmd_from_trailers, system_opts)
 
     local log_authors = log_authors_job:wait(1000)
     if log_authors.code ~= 0 then
@@ -135,6 +143,11 @@ local function update_author_table()
             table.insert(author_table, {label = author})
         end
     end
+
+    -- The remainder deals with getting authors from co-author trailers, which
+    -- we don't query dynamically, so only needs to be run once.
+    if updated_authors then return end
+    updated_authors = true
 
     local trailer_authors = trailer_authors_job:wait(1000)
     if trailer_authors.code ~= 0 then
@@ -173,9 +186,10 @@ function source:complete(params, callback)
         return
     end
 
-    if params.context.cursor_before_line:match("^Co%-authored%-by: .*") then
-        update_author_table()
-        callback(author_table)
+    local co_author_prefix = params.context.cursor_before_line:match("^Co%-authored%-by: (.*)$")
+    if co_author_prefix then
+        update_author_table(co_author_prefix)
+        callback({items = author_table, isIncomplete = true})
         return
     end
 
