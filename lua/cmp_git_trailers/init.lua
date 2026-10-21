@@ -125,9 +125,6 @@ local function update_author_table(query)
     local cmd_from_authors = {"git", "log", "--author=" .. query, "--pretty=%an <%ae>", "-100"}
     local log_authors_job = vim.system(cmd_from_authors, system_opts)
 
-    local cmd_from_trailers = {"git", "log", "--pretty=format:%(trailers:key=Co-authored-by,valueonly)", "-100"}
-    local trailer_authors_job = vim.system(cmd_from_trailers, system_opts)
-
     local log_authors = log_authors_job:wait(1000)
     if log_authors.code ~= 0 then
         vim.notify("Failed to get authors from log", vim.log.levels.DEBUG)
@@ -148,6 +145,31 @@ local function update_author_table(query)
     -- we don't query dynamically, so only needs to be run once.
     if updated_authors then return end
     updated_authors = true
+
+    -- Set this job off first as it's probably going to take longer than the
+    -- later ones.
+    local cmd_from_trailers = {"git", "log", "--pretty=format:%(trailers:key=Co-authored-by,valueonly)", "-100"}
+    local trailer_authors_job = vim.system(cmd_from_trailers, system_opts)
+
+    local name_job = vim.system({"git", "config", "get", "user.name"}, system_opts)
+    local email_job = vim.system({"git", "config", "get", "user.email"}, system_opts)
+
+    local name = name_job:wait(1000)
+    local email = email_job:wait(1000)
+
+    if name.code ~= 0 or email.code ~= 0 then
+        vim.notify("Failed to get identity from Git configuration", vim.log.levels.WARN)
+        return
+    end
+
+    local identity = vim.trim(assert(name.stdout)) .. " <" .. vim.trim(assert(email.stdout)) .. ">"
+    if not vim.list_contains(seen, identity) then
+        table.insert(seen, identity)
+        table.insert(author_table, {
+            label = identity,
+            documentation = "Self"
+        })
+    end
 
     local trailer_authors = trailer_authors_job:wait(1000)
     if trailer_authors.code ~= 0 then
