@@ -141,6 +141,9 @@ local function update_author_table(query)
         end
     end
 
+    -- Paranoia tells me to ensure the list is deduplicated.
+    vim.list.unique(author_table, function(x) return x.label end)
+
     -- The remainder deals with getting authors from co-author trailers, which
     -- we don't query dynamically, so only needs to be run once.
     if updated_authors then return end
