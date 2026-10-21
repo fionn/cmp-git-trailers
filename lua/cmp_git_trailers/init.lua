@@ -140,6 +140,7 @@ local function update_author_table()
     local trailer_authors = trailer_authors_job:wait(1000)
     if trailer_authors.code ~= 0 then
         vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
+        return
     end
     if not trailer_authors.stdout then return end
 
