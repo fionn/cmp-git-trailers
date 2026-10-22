@@ -4,10 +4,10 @@ local source = {}
 ---@type vim.SystemObj[]
 local jobs = {}
 local updated_trailers = false
-local updated_authors = false
+local updated_identities = false
 
 ---@type lsp.CompletionItem[]
-local trailer_table = {
+local global_trailers = {
     {
         label = "Counterpart-to:",
         documentation = "Commit or PR that this relates to, typically in another repository."
@@ -60,11 +60,11 @@ local trailer_table = {
 }
 
 ---@type lsp.CompletionItem[]
-local author_table = {}
+local global_identities = {}
 
 -- Get all trailers in the past 100 commits and merge them with our hard-coded
 -- list (by mutating it as a side effect).
-local function update_symbol_table()
+local function update_trailers_table()
     if #jobs > 0 then return end
     if updated_trailers then return end
 
@@ -85,7 +85,7 @@ local function update_symbol_table()
 
         ---@type string[]
         local labels = {}
-        for _, s in ipairs(trailer_table) do
+        for _, s in ipairs(global_trailers) do
             table.insert(labels, s.label)
         end
 
@@ -99,7 +99,7 @@ local function update_symbol_table()
         end
 
         vim.list.unique(trailers, function(x) return x.label end)
-        vim.list_extend(trailer_table, trailers)
+        vim.list_extend(global_trailers, trailers)
         updated_trailers = true
     end)
 
@@ -110,7 +110,7 @@ end
 -- co-authors for completion. We do this synchronously and mutate the global
 -- table, since we don't have any results to fall back on.
 ---@param query string
-local function update_author_table(query)
+local function update_identities_table(query)
     if query:match("^-") ~= nil then
         -- The query doesn't look like an author, so bail.
         return
@@ -123,10 +123,10 @@ local function update_author_table(query)
     }
 
     local cmd_from_authors = {"git", "log", "--author=" .. query, "--pretty=%an <%ae>", "-100"}
-    local log_authors_job = vim.system(cmd_from_authors, system_opts)
+    local commit_authors_proc = vim.system(cmd_from_authors, system_opts)
 
-    local log_authors = log_authors_job:wait(1000)
-    if log_authors.code ~= 0 then
+    local commit_authors = commit_authors_proc:wait(1000)
+    if commit_authors.code ~= 0 then
         vim.notify("Failed to get authors from log", vim.log.levels.DEBUG)
         return
     end
@@ -134,56 +134,72 @@ local function update_author_table(query)
     ---@type string[]
     local seen = {}
 
-    for author in assert(log_authors.stdout):gmatch("[^\n]+") do
+    for author in assert(commit_authors.stdout):gmatch("[^\n]+") do
         if not vim.list_contains(seen, author) then
             table.insert(seen, author)
-            table.insert(author_table, {label = author})
+            table.insert(global_identities, {label = author})
         end
     end
 
     -- Paranoia tells me to ensure the list is deduplicated.
-    vim.list.unique(author_table, function(x) return x.label end)
+    vim.list.unique(global_identities, function(x) return x.label end)
 
-    -- The remainder deals with getting authors from co-author trailers, which
-    -- we don't query dynamically, so only needs to be run once.
-    if updated_authors then return end
-    updated_authors = true
+    -- The remainder deals with getting authors from trailers, which
+    -- we don't query dynamically, so should only be run once.
+    if updated_identities then return end
+    updated_identities = true
 
     -- Set this job off first as it's probably going to take longer than the
     -- later ones.
-    local cmd_from_trailers = {"git", "log", "--pretty=format:%(trailers:key=Co-authored-by,valueonly)", "-100"}
-    local trailer_authors_job = vim.system(cmd_from_trailers, system_opts)
+    local cmd_get_coauthors = {"git", "log", "--pretty=format:%(trailers:key=Co-authored-by,valueonly)", "-100"}
+    local coauthors_proc = vim.system(cmd_get_coauthors, system_opts)
 
-    local name_job = vim.system({"git", "config", "get", "user.name"}, system_opts)
-    local email_job = vim.system({"git", "config", "get", "user.email"}, system_opts)
+    local cmd_get_signoffs = {"git", "log", "--pretty=format:%(trailers:key=Signed-off-by,valueonly)", "-100"}
+    local signoffs_proc = vim.system(cmd_get_signoffs, system_opts)
 
-    local name = name_job:wait(1000)
-    local email = email_job:wait(1000)
+    local name_proc = vim.system({"git", "config", "get", "user.name"}, system_opts)
+    local email_proc = vim.system({"git", "config", "get", "user.email"}, system_opts)
 
-    if name.code ~= 0 or email.code ~= 0 then
+    local self_name = name_proc:wait(1000)
+    local self_email = email_proc:wait(1000)
+
+    if self_name.code ~= 0 or self_email.code ~= 0 then
         vim.notify("Failed to get identity from Git configuration", vim.log.levels.WARN)
         return
     end
 
-    local identity = vim.trim(assert(name.stdout)) .. " <" .. vim.trim(assert(email.stdout)) .. ">"
-    if not vim.list_contains(seen, identity) then
-        table.insert(seen, identity)
-        table.insert(author_table, {
-            label = identity,
+    local self = vim.trim(assert(self_name.stdout)) .. " <" .. vim.trim(assert(self_email.stdout)) .. ">"
+    if not vim.list_contains(seen, self) then
+        table.insert(seen, self)
+        table.insert(global_identities, {
+            label = self,
             documentation = "Self"
         })
     end
 
-    local trailer_authors = trailer_authors_job:wait(1000)
-    if trailer_authors.code ~= 0 then
+    local trailer_coauthors = coauthors_proc:wait(1000)
+    if trailer_coauthors.code ~= 0 then
         vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
         return
     end
 
-    for author in assert(trailer_authors.stdout):gmatch("[^\n]+") do
-        if not vim.list_contains(seen, author) then
-            table.insert(seen, author)
-            table.insert(author_table, {label = author})
+    for coauthor in assert(trailer_coauthors.stdout):gmatch("[^\n]+") do
+        if not vim.list_contains(seen, coauthor) then
+            table.insert(seen, coauthor)
+            table.insert(global_identities, {label = coauthor})
+        end
+    end
+
+    local trailer_signoffs = signoffs_proc:wait(1000)
+    if trailer_signoffs.code ~= 0 then
+        vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
+        return
+    end
+
+    for signoff in assert(trailer_signoffs.stdout):gmatch("[^\n]+") do
+        if not vim.list_contains(seen, signoff) then
+            table.insert(seen, signoff)
+            table.insert(global_identities, {label = signoff})
         end
     end
 end
@@ -202,7 +218,7 @@ function source:complete(params, callback)
     -- source:init method so it's pre-populated, but this doesn't exist. Second
     -- best would be to register an autocommand, but that seems inappropriate
     -- for a completion source.
-    update_symbol_table()
+    update_trailers_table()
 
     if params.context.cursor.row < 3 then
         -- The cursor is on the subject or gap between subject and body, where
@@ -214,8 +230,8 @@ function source:complete(params, callback)
     local co_author_prefix = params.context.cursor_before_line:match("^Co%-authored%-by: (.*)$")
     local sign_off_prefix = params.context.cursor_before_line:match("^Signed%-off%-by: (.*)$")
     if co_author_prefix or sign_off_prefix then
-        update_author_table(assert(co_author_prefix or sign_off_prefix))
-        callback({items = author_table, isIncomplete = true})
+        update_identities_table(assert(co_author_prefix or sign_off_prefix))
+        callback({items = global_identities, isIncomplete = true})
         return
     end
 
@@ -226,7 +242,7 @@ function source:complete(params, callback)
         return
     end
 
-    callback({items = trailer_table, isIncomplete = not updated_trailers})
+    callback({items = global_trailers, isIncomplete = not updated_trailers})
 end
 
 return source
