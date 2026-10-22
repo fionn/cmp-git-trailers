@@ -1,8 +1,6 @@
 ---@diagnostic disable-next-line: name-style-check
 local source = {}
 
----@type vim.SystemObj[]
-local jobs = {}
 local updated_trailers = false
 local updated_identities = false
 
@@ -65,8 +63,8 @@ local global_identities = {}
 -- Get all trailers in the past 100 commits and merge them with our hard-coded
 -- list (by mutating it as a side effect).
 local function update_trailers_table()
-    if #jobs > 0 then return end
     if updated_trailers then return end
+    updated_trailers = true
 
     ---@type vim.SystemOpts
     local system_opts = {
@@ -74,9 +72,8 @@ local function update_trailers_table()
         timeout = 1000
     }
     local cmd = {"git", "log", "--pretty=format:%(trailers:keyonly=true)", "-100"}
-    local job = vim.system(cmd, system_opts, function(out)
+    vim.system(cmd, system_opts, function(out)
         if out.code ~= 0 then
-            updated_trailers = true
             vim.schedule(function()
                 vim.notify("Failed to get trailers from log", vim.log.levels.DEBUG)
             end)
@@ -100,10 +97,7 @@ local function update_trailers_table()
 
         vim.list.unique(trailers, function(x) return x.label end)
         vim.list_extend(global_trailers, trailers)
-        updated_trailers = true
     end)
-
-    table.insert(jobs, job)
 end
 
 -- Get authors from the commit log and Co-authored-by trailers as candidate
