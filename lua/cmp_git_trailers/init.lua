@@ -145,11 +145,8 @@ local function update_identities_table(query)
 
     -- Set this job off first as it's probably going to take longer than the
     -- later ones.
-    local cmd_get_coauthors = {"git", "log", "--pretty=format:%(trailers:key=Co-authored-by,valueonly)", "-100"}
-    local coauthors_proc = vim.system(cmd_get_coauthors, system_opts)
-
-    local cmd_get_signoffs = {"git", "log", "--pretty=format:%(trailers:key=Signed-off-by,valueonly)", "-100"}
-    local signoffs_proc = vim.system(cmd_get_signoffs, system_opts)
+    local cmd_trailer_identities = {"git", "log", "--pretty=format:%(trailers:key=Co-authored-by,key=Signed-off-by,valueonly)", "-100"}
+    local trailer_identities_proc = vim.system(cmd_trailer_identities, system_opts)
 
     local name_proc = vim.system({"git", "config", "get", "user.name"}, system_opts)
     local email_proc = vim.system({"git", "config", "get", "user.email"}, system_opts)
@@ -171,29 +168,16 @@ local function update_identities_table(query)
         })
     end
 
-    local trailer_coauthors = coauthors_proc:wait(1000)
-    if trailer_coauthors.code ~= 0 then
+    local trailer_identities = trailer_identities_proc:wait(1000)
+    if trailer_identities.code ~= 0 then
         vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
         return
     end
 
-    for coauthor in assert(trailer_coauthors.stdout):gmatch("[^\n]+") do
-        if not vim.list_contains(seen, coauthor) then
-            table.insert(seen, coauthor)
-            table.insert(global_identities, {label = coauthor})
-        end
-    end
-
-    local trailer_signoffs = signoffs_proc:wait(1000)
-    if trailer_signoffs.code ~= 0 then
-        vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
-        return
-    end
-
-    for signoff in assert(trailer_signoffs.stdout):gmatch("[^\n]+") do
-        if not vim.list_contains(seen, signoff) then
-            table.insert(seen, signoff)
-            table.insert(global_identities, {label = signoff})
+    for identity in assert(trailer_identities.stdout):gmatch("[^\n]+") do
+        if not vim.list_contains(seen, identity) then
+            table.insert(seen, identity)
+            table.insert(global_identities, {label = identity})
         end
     end
 end
