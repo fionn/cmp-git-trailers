@@ -100,9 +100,9 @@ local function update_trailers_table()
     end)
 end
 
--- Get authors from the commit log and Co-authored-by trailers as candidate
--- co-authors for completion. We do this synchronously and mutate the global
--- table, since we don't have any results to fall back on.
+-- Get authors from the commit log and identities from trailers as candidates
+-- for completion. We do this synchronously and mutate the global table, since
+-- we don't have any results to fall back on.
 ---@param query string
 local function update_identities_table(query)
     if query:match("^-") ~= nil then
