@@ -62,7 +62,7 @@ local global_identities = {}
 
 -- Get all trailers in the past 100 commits and merge them with our hard-coded
 -- list (by mutating it as a side effect).
-local function update_trailers_table()
+local function update_global_trailers()
     if updated_trailers then return end
     updated_trailers = true
 
@@ -104,9 +104,9 @@ end
 -- for completion. We do this synchronously and mutate the global table, since
 -- we don't have any results to fall back on.
 ---@param query string
-local function update_identities_table(query)
+local function update_global_identities(query)
     if query:match("^-") ~= nil then
-        -- The query doesn't look like an author, so bail.
+        -- The query doesn't look like an identity, so bail.
         return
     end
 
@@ -196,7 +196,7 @@ function source:complete(params, callback)
     -- source:init method so it's pre-populated, but this doesn't exist. Second
     -- best would be to register an autocommand, but that seems inappropriate
     -- for a completion source.
-    update_trailers_table()
+    update_global_trailers()
 
     if params.context.cursor.row < 3 then
         -- The cursor is on the subject or gap between subject and body, where
@@ -208,7 +208,7 @@ function source:complete(params, callback)
     local co_author_prefix = params.context.cursor_before_line:match("^Co%-authored%-by: (.*)$")
     local sign_off_prefix = params.context.cursor_before_line:match("^Signed%-off%-by: (.*)$")
     if co_author_prefix or sign_off_prefix then
-        update_identities_table(assert(co_author_prefix or sign_off_prefix))
+        update_global_identities(assert(co_author_prefix or sign_off_prefix))
         callback({items = global_identities, isIncomplete = true})
         return
     end
