@@ -1,8 +1,14 @@
 ---@diagnostic disable-next-line: name-style-check
 local source = {}
 
+---@type vim.SystemOpts
+local system_opts = {
+    text = true,
+    timeout = 1000
+}
+
 local updated_trailers = false
-local updated_identities = false
+local updated_identities_from_trailers = false
 
 ---@type lsp.CompletionItem[]
 local global_trailers = {
@@ -57,6 +63,9 @@ local global_trailers = {
     }
 }
 
+---@type lsp.CompletionItem?
+local self_identity = nil
+
 ---@type lsp.CompletionItem[]
 local global_identities = {}
 
@@ -66,11 +75,6 @@ local function update_global_trailers()
     if updated_trailers then return end
     updated_trailers = true
 
-    ---@type vim.SystemOpts
-    local system_opts = {
-        text = true,
-        timeout = 1000
-    }
     local cmd = {"git", "log", "--pretty=format:%(trailers:keyonly=true)", "-100"}
     vim.system(cmd, system_opts, function(out)
         if out.code ~= 0 then
@@ -105,81 +109,86 @@ end
 -- we don't have any results to fall back on.
 ---@param query string
 local function update_global_identities(query)
-    if query:match("^-") ~= nil then
-        -- The query doesn't look like an identity, so bail.
-        return
-    end
-
-    ---@type vim.SystemOpts
-    local system_opts = {
-        text = true,
-        timeout = 1000
-    }
-
-    local cmd_from_authors = {"git", "log", "--author=" .. query, "--pretty=%an <%ae>", "-100"}
-    local commit_authors_proc = vim.system(cmd_from_authors, system_opts)
-
-    local commit_authors = commit_authors_proc:wait(1000)
-    if commit_authors.code ~= 0 then
-        vim.notify("Failed to get authors from log", vim.log.levels.DEBUG)
-        return
-    end
-
     ---@type string[]
     local seen = {}
-
-    for author in assert(commit_authors.stdout):gmatch("[^\n]+") do
-        if not vim.list_contains(seen, author) then
-            table.insert(seen, author)
-            table.insert(global_identities, {label = author})
-        end
+    for _, s in ipairs(global_identities) do
+        table.insert(seen, s.label)
     end
 
-    -- Paranoia tells me to ensure the list is deduplicated.
+    -- Add user's identity, useful for signoff. We do this conditionally since
+    -- we only want to do it once.
+    ---@type vim.SystemObj
+    local self_proc = nil
+    if self_identity == nil then
+        self_proc = vim.system({"git", "config", "get", "user.name"}, system_opts, function(self_name)
+            vim.schedule(function()
+                local self_email = vim.system({"git", "config", "get", "user.email"}, system_opts):wait(1000)
+
+                if self_name.code ~= 0 or self_email.code ~= 0 then
+                    vim.notify("Failed to get identity from Git configuration", vim.log.levels.WARN)
+                    return
+                end
+
+                self_identity = {
+                    label = vim.trim(assert(self_name.stdout)) .. " <" .. vim.trim(assert(self_email.stdout)) .. ">",
+                    documentation = "Self"
+                }
+                table.insert(seen, self_identity.label)
+                table.insert(global_identities, self_identity)
+            end)
+        end)
+    end
+
+    -- Scour Co-authored-by and Signed-off-by trailers for identities. We do
+    -- this conditionally since we only want to do it once.
+    ---@type vim.SystemObj
+    local trailers_proc = nil
+    if not updated_identities_from_trailers then
+        updated_identities_from_trailers = true
+        local cmd_trailer_identities = {"git", "log",
+            "--pretty=format:%(trailers:key=Co-authored-by,key=Signed-off-by,valueonly)",
+            "-100"}
+        trailers_proc = vim.system(cmd_trailer_identities, system_opts, function(out)
+            if out.code ~= 0 then
+                vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
+                return
+            end
+
+            for identity in assert(out.stdout):gmatch("[^\n]+") do
+                if not vim.list_contains(seen, identity) then
+                    table.insert(seen, identity)
+                    table.insert(global_identities, {label = identity})
+                end
+            end
+        end)
+    end
+
+    -- Add identities from previous commit authors, dynamic based on the prefix.
+    local cmd_from_authors = {"git", "log", "--author=" .. query, "--pretty=%an <%ae>", "-100"}
+    local log_proc = vim.system(cmd_from_authors, system_opts, function(out)
+        if out.code ~= 0 then
+            vim.notify("Failed to get authors from log", vim.log.levels.DEBUG)
+            return
+        end
+
+        for author in assert(out.stdout):gmatch("[^\n]+") do
+            if not vim.list_contains(seen, author) then
+                table.insert(seen, author)
+                table.insert(global_identities, {label = author})
+            end
+        end
+    end)
+
+    if self_proc ~= nil then
+        self_proc:wait(1000)
+    end
+    if trailers_proc ~= nil then
+        trailers_proc:wait(1000)
+    end
+    log_proc:wait(1000)
+
+    -- TODO: only deduplicate if the above mutated the table.
     vim.list.unique(global_identities, function(x) return x.label end)
-
-    -- The remainder deals with getting authors from trailers, which
-    -- we don't query dynamically, so should only be run once.
-    if updated_identities then return end
-    updated_identities = true
-
-    -- Set this job off first as it's probably going to take longer than the
-    -- later ones.
-    local cmd_trailer_identities = {"git", "log", "--pretty=format:%(trailers:key=Co-authored-by,key=Signed-off-by,valueonly)", "-100"}
-    local trailer_identities_proc = vim.system(cmd_trailer_identities, system_opts)
-
-    local name_proc = vim.system({"git", "config", "get", "user.name"}, system_opts)
-    local email_proc = vim.system({"git", "config", "get", "user.email"}, system_opts)
-
-    local self_name = name_proc:wait(1000)
-    local self_email = email_proc:wait(1000)
-
-    if self_name.code ~= 0 or self_email.code ~= 0 then
-        vim.notify("Failed to get identity from Git configuration", vim.log.levels.WARN)
-        return
-    end
-
-    local self = vim.trim(assert(self_name.stdout)) .. " <" .. vim.trim(assert(self_email.stdout)) .. ">"
-    if not vim.list_contains(seen, self) then
-        table.insert(seen, self)
-        table.insert(global_identities, {
-            label = self,
-            documentation = "Self"
-        })
-    end
-
-    local trailer_identities = trailer_identities_proc:wait(1000)
-    if trailer_identities.code ~= 0 then
-        vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
-        return
-    end
-
-    for identity in assert(trailer_identities.stdout):gmatch("[^\n]+") do
-        if not vim.list_contains(seen, identity) then
-            table.insert(seen, identity)
-            table.insert(global_identities, {label = identity})
-        end
-    end
 end
 
 function source:is_available()
