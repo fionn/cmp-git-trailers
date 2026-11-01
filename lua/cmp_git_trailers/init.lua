@@ -111,6 +111,7 @@ end
 local function update_global_identities(query)
     ---@type vim.SystemObj[]
     local subprocesses = {}
+    local mutated = false
 
     -- Add user's identity, useful for signoff. We do this conditionally since
     -- we only want to do it once.
@@ -129,6 +130,7 @@ local function update_global_identities(query)
                     documentation = "Self"
                 }
                 table.insert(global_identities, self_identity)
+                mutated = true
             end)
         end))
     end
@@ -148,6 +150,7 @@ local function update_global_identities(query)
 
             for identity in assert(out.stdout):gmatch("[^\n]+") do
                 table.insert(global_identities, {label = identity})
+                mutated = true
             end
         end))
     end
@@ -162,6 +165,7 @@ local function update_global_identities(query)
 
         for author in assert(out.stdout):gmatch("[^\n]+") do
             table.insert(global_identities, {label = author})
+            mutated = true
         end
     end))
 
@@ -169,8 +173,9 @@ local function update_global_identities(query)
         proc:wait(1000)
     end
 
-    -- TODO: only deduplicate if the above mutated the table.
-    vim.list.unique(global_identities, function(x) return x.label end)
+    if mutated then
+        vim.list.unique(global_identities, function(x) return x.label end)
+    end
 end
 
 function source:is_available()
