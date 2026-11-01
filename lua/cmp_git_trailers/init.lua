@@ -87,7 +87,7 @@ local function update_global_trailers()
     if updated_trailers then return end
     updated_trailers = true
 
-    local cmd = {"git", "log", "--pretty=format:%(trailers:keyonly=true)", "-100"}
+    local cmd = {"git", "log", "--format=%(trailers:keyonly)", "-100"}
     vim.system(cmd, system_opts, function(out)
         if out.code ~= 0 then
             vim.schedule(function()
@@ -156,7 +156,7 @@ local function update_global_identities(query)
     if not updated_identities_from_trailers then
         updated_identities_from_trailers = true
         local cmd_trailer_identities = {"git", "log",
-            "--pretty=format:%(trailers:key=Co-authored-by,key=Signed-off-by,valueonly)",
+            "--format=%(trailers:key=Co-authored-by,key=Signed-off-by,valueonly)",
             "-100"}
         table.insert(subprocesses, vim.system(cmd_trailer_identities, system_opts, function(out)
             if out.code ~= 0 then
@@ -177,7 +177,7 @@ local function update_global_identities(query)
     end
 
     -- Add identities from previous commit authors, dynamic based on the prefix.
-    local cmd_from_authors = {"git", "log", "--author=" .. query, "--pretty=%an <%ae>", "-100"}
+    local cmd_from_authors = {"git", "log", "--author=" .. query, "--format=%an <%ae>", "-100"}
     table.insert(subprocesses, vim.system(cmd_from_authors, system_opts, function(out)
         if out.code ~= 0 then
             vim.notify("Failed to get authors from log", vim.log.levels.DEBUG)
