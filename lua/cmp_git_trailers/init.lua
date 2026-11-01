@@ -167,6 +167,7 @@ local function update_global_identities(query)
             for identity in assert(out.stdout):gmatch("[^\n]+") do
                 table.insert(global_identities, {
                     label = identity,
+                    documentation = identity,
                     detail = "From trailers",
                     kind = 5
                 })
@@ -186,6 +187,7 @@ local function update_global_identities(query)
         for author in assert(out.stdout):gmatch("[^\n]+") do
             table.insert(global_identities, {
                 label = author,
+                documentation = author,
                 detail = "From previous authors",
                 kind = 5
             })
