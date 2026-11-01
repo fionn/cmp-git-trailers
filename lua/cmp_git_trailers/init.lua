@@ -138,8 +138,8 @@ local function update_global_identities(query)
                 return
             end
 
-            ---@type string, string
-            local name, email = out.stdout:match("^(.-) <([^>]+)>")
+            local name, email = assert(out.stdout):match("^(.-) <([^>]+)>")
+            ---@type string
             local identity = assert(name) .. " <" .. assert(email) .. ">"
             table.insert(global_identities, {
                 label = identity,
