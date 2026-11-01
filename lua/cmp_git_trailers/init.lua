@@ -205,10 +205,10 @@ function source:complete(params, callback)
         return
     end
 
-    local co_author_prefix = params.context.cursor_before_line:match("^Co%-authored%-by: (.*)$")
-    local sign_off_prefix = params.context.cursor_before_line:match("^Signed%-off%-by: (.*)$")
-    if co_author_prefix or sign_off_prefix then
-        update_global_identities(assert(co_author_prefix or sign_off_prefix))
+    local identity_prefix = params.context.cursor_before_line:match("^Co%-authored%-by: (.*)$")
+        or params.context.cursor_before_line:match("^Signed%-off%-by: (.*)$")
+    if identity_prefix then
+        update_global_identities(identity_prefix)
         callback({items = global_identities, isIncomplete = true})
         return
     end
