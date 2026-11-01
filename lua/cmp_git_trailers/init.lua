@@ -13,52 +13,64 @@ local updated_identities_from_trailers = false
 ---@type lsp.CompletionItem[]
 local global_trailers = {
     {
-        label = "Counterpart-to:",
+        label = "Counterpart-to",
+        insertText = "Counterpart-to: ",
         documentation = "Commit or PR that this relates to, typically in another repository."
     },
     {
-        label = "Follow-up-to:",
+        label = "Follow-up-to",
+        insertText = "Follow-up-to: ",
         documentation = "Commit or PR that this succeeds."
     },
     {
-        label = "Fixup-for:",
+        label = "Fixup-for",
+        insertText = "Fixup-for: ",
         documentation = "Commit that would have been subject to a fixup if not already pushed."
     },
     {
-        label = "Signed-off-by:",
+        label = "Signed-off-by",
+        insertText = "Signed-off-by: ",
         -- Documentation adapted from git help commit.
         documentation = "The meaning of a signoff depends on the project to which you’re committing. For example, it may certify that the committer has the rights to submit the work under the project’s license or agrees to some contributor representation, such as a Developer Certificate of Origin. See https://developercertificate.org."
     },
     {
-        label = "Co-authored-by:",
+        label = "Co-authored-by",
+        insertText = "Co-authored-by: ",
         documentation = "Attribute the commit to multiple authors.\n\nSee https://docs.github.com/en/pull-requests/how-tos/commit-changes/creating-a-commit-with-multiple-authors#creating-a-commit-with-multiple-authors."
     },
     {
-        label = "On-behalf-of: @",
+        label = "On-behalf-of",
+        insertText = "On-behalf-of: @",
         documentation = "Attribute the commit to an organisation.\n\nSee https://docs.github.com/en/pull-requests/how-tos/commit-changes/creating-a-commit-with-multiple-authors#creating-a-commit-on-behalf-of-an-organization."
     },
     {
-        label = "Assisted-by:",
+        label = "Assisted-by",
+        insertText = "Assisted-by: ",
         documentation = "Provide attribution for tool use.\n\nSee https://docs.kernel.org/process/coding-assistants.html#attribution."
     },
     {
-        label = "See:",
+        label = "See",
+        insertText = "See: ",
         documentation = "URL to some related resource for additional context."
     },
     {
-        label = "Ticket:",
+        label = "Ticket",
+        insertText = "Ticket: ",
         documentation = "Unique identifier in the relevant tracking system."
     },
     {
-        label = "Closes: #",
+        label = "Closes",
+        insertText = "Closes: #",
         documentation = "Link to an issue this commit closes.\n\nSee https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword."
     },
     {
-        label = "Fixes: #",
+        label = "Fixes",
+        insertText = "Fixes: #",
         documentation = "Link to an issue this commit fixes.\n\nSee https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword."
     },
     {
-        label = "skip-checks: true",
+        label = "skip-checks",
+        insertText = "skip-checks: true",
         documentation = "Skip CI/CD workflows in GitHub Actions.\n\nSee https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs."
     }
 }
@@ -93,9 +105,12 @@ local function update_global_trailers()
         ---@type lsp.CompletionItem[]
         local trailers = {}
         for key in assert(out.stdout):gmatch("[^\n]+") do
-            key = key .. ":"
             if not vim.list_contains(labels, key) then
-                table.insert(trailers, {label = key})
+                table.insert(trailers, {
+                    label = key,
+                    insertText = key .. ": ",
+                    detail = "Previously seen trailer"
+                })
             end
         end
 
