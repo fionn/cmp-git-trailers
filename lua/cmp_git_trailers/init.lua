@@ -8,6 +8,7 @@ local system_opts = {
 }
 
 local updated_trailers = false
+local updated_identity_from_self = false
 local updated_identities_from_trailers = false
 
 ---@type lsp.CompletionItem[]
@@ -75,9 +76,6 @@ local global_trailers = {
     }
 }
 
----@type lsp.CompletionItem?
-local self_identity = nil
-
 ---@type lsp.CompletionItem[]
 local global_identities = {}
 
@@ -130,24 +128,24 @@ local function update_global_identities(query)
 
     -- Add user's identity, useful for signoff. We do this conditionally since
     -- we only want to do it once.
-    if self_identity == nil then
-        table.insert(subprocesses, vim.system({"git", "config", "get", "user.name"}, system_opts, function(self_name)
-            vim.schedule(function()
-                local self_email = vim.system({"git", "config", "get", "user.email"}, system_opts):wait(1000)
+    if not updated_identity_from_self then
+        updated_identity_from_self = true
+        table.insert(subprocesses, vim.system({"git", "var", "GIT_AUTHOR_IDENT"}, system_opts, function(out)
+            if out.code ~= 0 then
+                vim.notify("Failed to get identity from Git configuration", vim.log.levels.WARN)
+                return
+            end
 
-                if self_name.code ~= 0 or self_email.code ~= 0 then
-                    vim.notify("Failed to get identity from Git configuration", vim.log.levels.WARN)
-                    return
-                end
-
-                self_identity = {
-                    label = vim.trim(assert(self_name.stdout)) .. " <" .. vim.trim(assert(self_email.stdout)) .. ">",
-                    detail = "Self",
-                    kind = 5
-                }
-                table.insert(global_identities, self_identity)
-                mutated = true
-            end)
+            ---@type string, string
+            local name, email = out.stdout:match("^(.-) <([^>]+)>")
+            local identity = assert(name) .. " <" .. assert(email) .. ">"
+            table.insert(global_identities, {
+                label = identity,
+                documentation = identity,
+                detail = "Self",
+                kind = 5
+            })
+            mutated = true
         end))
     end
 
