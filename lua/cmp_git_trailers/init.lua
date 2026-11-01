@@ -202,12 +202,14 @@ local function update_global_identities(query)
     end
 end
 
+---@diagnostic disable-next-line
 function source:is_available()
     return vim.bo.filetype == "gitcommit"
 end
 
 ---@param params cmp.SourceCompletionApiParams
 ---@param callback fun(response: lsp.CompletionResponse|nil)
+---@diagnostic disable-next-line
 function source:complete(params, callback)
     -- Asynchronously update the symbol table with trailers from the commit log,
     -- if any. This may or may not complete before the callback, but if we lose
