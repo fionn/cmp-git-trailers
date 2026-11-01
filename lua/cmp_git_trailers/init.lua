@@ -109,12 +109,6 @@ end
 -- we don't have any results to fall back on.
 ---@param query string
 local function update_global_identities(query)
-    ---@type string[]
-    local seen = {}
-    for _, s in ipairs(global_identities) do
-        table.insert(seen, s.label)
-    end
-
     -- Add user's identity, useful for signoff. We do this conditionally since
     -- we only want to do it once.
     ---@type vim.SystemObj
@@ -133,7 +127,6 @@ local function update_global_identities(query)
                     label = vim.trim(assert(self_name.stdout)) .. " <" .. vim.trim(assert(self_email.stdout)) .. ">",
                     documentation = "Self"
                 }
-                table.insert(seen, self_identity.label)
                 table.insert(global_identities, self_identity)
             end)
         end)
@@ -155,10 +148,7 @@ local function update_global_identities(query)
             end
 
             for identity in assert(out.stdout):gmatch("[^\n]+") do
-                if not vim.list_contains(seen, identity) then
-                    table.insert(seen, identity)
-                    table.insert(global_identities, {label = identity})
-                end
+                table.insert(global_identities, {label = identity})
             end
         end)
     end
@@ -172,10 +162,7 @@ local function update_global_identities(query)
         end
 
         for author in assert(out.stdout):gmatch("[^\n]+") do
-            if not vim.list_contains(seen, author) then
-                table.insert(seen, author)
-                table.insert(global_identities, {label = author})
-            end
+            table.insert(global_identities, {label = author})
         end
     end)
 
