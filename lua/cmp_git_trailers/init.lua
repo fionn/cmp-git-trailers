@@ -132,7 +132,9 @@ local function update_global_identities(query)
         updated_identity_from_self = true
         table.insert(subprocesses, vim.system({"git", "var", "GIT_AUTHOR_IDENT"}, system_opts, function(out)
             if out.code ~= 0 then
-                vim.notify("Failed to get identity from Git configuration", vim.log.levels.WARN)
+                vim.schedule(function()
+                    vim.notify("Failed to get identity from Git configuration", vim.log.levels.WARN)
+                end)
                 return
             end
 
@@ -158,7 +160,9 @@ local function update_global_identities(query)
             "-100"}
         table.insert(subprocesses, vim.system(cmd_trailer_identities, system_opts, function(out)
             if out.code ~= 0 then
-                vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
+                vim.schedule(function()
+                    vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
+                end)
                 return
             end
 
@@ -178,7 +182,9 @@ local function update_global_identities(query)
     local cmd_from_authors = {"git", "log", "--author=" .. query, "--format=%an <%ae>", "-100"}
     table.insert(subprocesses, vim.system(cmd_from_authors, system_opts, function(out)
         if out.code ~= 0 then
-            vim.notify("Failed to get authors from log", vim.log.levels.DEBUG)
+            vim.schedule(function()
+                vim.notify("Failed to get authors from log", vim.log.levels.DEBUG)
+            end)
             return
         end
 
