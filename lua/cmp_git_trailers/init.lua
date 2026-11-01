@@ -142,7 +142,7 @@ local function update_global_identities(query)
 
                 self_identity = {
                     label = vim.trim(assert(self_name.stdout)) .. " <" .. vim.trim(assert(self_email.stdout)) .. ">",
-                    documentation = "Self"
+                    detail = "Self"
                 }
                 table.insert(global_identities, self_identity)
                 mutated = true
@@ -164,7 +164,8 @@ local function update_global_identities(query)
             end
 
             for identity in assert(out.stdout):gmatch("[^\n]+") do
-                table.insert(global_identities, {label = identity})
+                table.insert(global_identities,
+                    {label = identity, detail = "From trailers"})
                 mutated = true
             end
         end))
@@ -179,7 +180,8 @@ local function update_global_identities(query)
         end
 
         for author in assert(out.stdout):gmatch("[^\n]+") do
-            table.insert(global_identities, {label = author})
+            table.insert(global_identities,
+                {label = author, detail = "From previous authors"})
             mutated = true
         end
     end))
