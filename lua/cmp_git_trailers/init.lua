@@ -109,12 +109,13 @@ end
 -- we don't have any results to fall back on.
 ---@param query string
 local function update_global_identities(query)
+    ---@type vim.SystemObj[]
+    local subprocesses = {}
+
     -- Add user's identity, useful for signoff. We do this conditionally since
     -- we only want to do it once.
-    ---@type vim.SystemObj
-    local self_proc = nil
     if self_identity == nil then
-        self_proc = vim.system({"git", "config", "get", "user.name"}, system_opts, function(self_name)
+        table.insert(subprocesses, vim.system({"git", "config", "get", "user.name"}, system_opts, function(self_name)
             vim.schedule(function()
                 local self_email = vim.system({"git", "config", "get", "user.email"}, system_opts):wait(1000)
 
@@ -129,19 +130,17 @@ local function update_global_identities(query)
                 }
                 table.insert(global_identities, self_identity)
             end)
-        end)
+        end))
     end
 
     -- Scour Co-authored-by and Signed-off-by trailers for identities. We do
     -- this conditionally since we only want to do it once.
-    ---@type vim.SystemObj
-    local trailers_proc = nil
     if not updated_identities_from_trailers then
         updated_identities_from_trailers = true
         local cmd_trailer_identities = {"git", "log",
             "--pretty=format:%(trailers:key=Co-authored-by,key=Signed-off-by,valueonly)",
             "-100"}
-        trailers_proc = vim.system(cmd_trailer_identities, system_opts, function(out)
+        table.insert(subprocesses, vim.system(cmd_trailer_identities, system_opts, function(out)
             if out.code ~= 0 then
                 vim.notify("Failed to get authors from trailers", vim.log.levels.DEBUG)
                 return
@@ -150,12 +149,12 @@ local function update_global_identities(query)
             for identity in assert(out.stdout):gmatch("[^\n]+") do
                 table.insert(global_identities, {label = identity})
             end
-        end)
+        end))
     end
 
     -- Add identities from previous commit authors, dynamic based on the prefix.
     local cmd_from_authors = {"git", "log", "--author=" .. query, "--pretty=%an <%ae>", "-100"}
-    local log_proc = vim.system(cmd_from_authors, system_opts, function(out)
+    table.insert(subprocesses, vim.system(cmd_from_authors, system_opts, function(out)
         if out.code ~= 0 then
             vim.notify("Failed to get authors from log", vim.log.levels.DEBUG)
             return
@@ -164,15 +163,11 @@ local function update_global_identities(query)
         for author in assert(out.stdout):gmatch("[^\n]+") do
             table.insert(global_identities, {label = author})
         end
-    end)
+    end))
 
-    if self_proc ~= nil then
-        self_proc:wait(1000)
+    for _, proc in ipairs(subprocesses) do
+        proc:wait(1000)
     end
-    if trailers_proc ~= nil then
-        trailers_proc:wait(1000)
-    end
-    log_proc:wait(1000)
 
     -- TODO: only deduplicate if the above mutated the table.
     vim.list.unique(global_identities, function(x) return x.label end)
