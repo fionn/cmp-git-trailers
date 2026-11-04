@@ -200,7 +200,7 @@ local function update_global_identities(query)
     end))
 
     for _, proc in ipairs(subprocesses) do
-        proc:wait(1000)
+        proc:wait(system_opts.timeout)
     end
 
     if mutated then
