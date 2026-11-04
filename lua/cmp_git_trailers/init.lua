@@ -241,9 +241,9 @@ function source:complete(params, callback)
         return
     end
 
-    if not params.context.cursor_before_line:match("^%S*$") then
-        -- The cursor is not on a (possibly empty) word at the start of a line,
-        -- so this can't be a trailer, so don't offer any completion candidates.
+    if not params.context.cursor_before_line:match("^%w+%S*$") then
+        -- The cursor is not on a word at the start of a line, so this can't be
+        -- a trailer, so don't offer any completion candidates.
         callback()
         return
     end
