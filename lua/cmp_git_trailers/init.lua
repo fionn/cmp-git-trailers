@@ -40,6 +40,26 @@ local global_trailers = {
         documentation = "Attribute the commit to multiple authors.\n\nSee https://docs.github.com/en/pull-requests/how-tos/commit-changes/creating-a-commit-with-multiple-authors#creating-a-commit-with-multiple-authors."
     },
     {
+        label = "Acked-by",
+        insertText = "Acked-by: ",
+        documentation = "This trailer says that the person who is more familiar with the area the patch attempts to modify liked the patch."
+    },
+    {
+        label = "Reviewed-by",
+        insertText = "Reviewed-by: ",
+        documentation = "Offered by the reviewers themselves when they are completely satisfied with the patch after a detailed analysis.\n\nSee https://reviewerstatement.org/"
+    },
+    {
+        label = "Helped-by",
+        insertText = "Helped-by: ",
+        documentation = "Used to credit someone who suggested ideas for changes without providing the precise changes in patch form."
+    },
+    {
+        label = "Reported-by",
+        insertText = "Reported-by: ",
+        documentation = "Used to credit someone who found the bug that the patch attempts to fix."
+    },
+    {
         label = "On-behalf-of",
         insertText = "On-behalf-of: @",
         documentation = "Attribute the commit to an organisation.\n\nSee https://docs.github.com/en/pull-requests/how-tos/commit-changes/creating-a-commit-with-multiple-authors#creating-a-commit-on-behalf-of-an-organization."
@@ -235,6 +255,10 @@ function source:complete(params, callback)
 
     local identity_prefix = params.context.cursor_before_line:match("^Co%-authored%-by: (.*)$")
         or params.context.cursor_before_line:match("^Signed%-off%-by: (.*)$")
+        or params.context.cursor_before_line:match("^Acked%-by: (.*)$")
+        or params.context.cursor_before_line:match("^Reviewed%-by: (.*)$")
+        or params.context.cursor_before_line:match("^Helped%-by: (.*)$")
+        or params.context.cursor_before_line:match("^Reported%-by: (.*)$")
     if identity_prefix then
         update_global_identities(identity_prefix)
         callback({items = global_identities, isIncomplete = true})
