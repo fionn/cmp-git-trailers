@@ -67,7 +67,7 @@ local global_trailers = {
     {
         label = "Assisted-by",
         insertText = "Assisted-by: ",
-        documentation = "Provide attribution for tool use.\n\nSee https://docs.kernel.org/process/coding-assistants.html#attribution."
+        documentation = "Provide attribution for tool use."
     },
     {
         label = "See",
